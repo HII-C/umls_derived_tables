@@ -1,0 +1,13 @@
+# POPULATE DERIVED.SYNONYM VIA JOINING CONCEPT, SAB, TERM AND MRCONSO
+# Notice the order of join statement
+SELECT * FROM derived.synonym LIMIT 100;
+INSERT INTO derived.synonym (tid, cid, sid)
+  SELECT
+    tid,
+    cid,
+    sid
+  FROM umls.MRCONSO
+    JOIN derived.term ON umls.MRCONSO.str = derived.term.str
+    JOIN derived.sab ON derived.sab.str = umls.MRCONSO.sab
+    JOIN derived.concept ON derived.concept.cui = umls.MRCONSO.cui
+WHERE length(umls.MRCONSO.str) <= 255 AND LAT = 'ENG' LIMIT 100;
