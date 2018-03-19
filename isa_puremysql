@@ -1,0 +1,66 @@
+
+
+
+DROP PROCEDURE IF EXISTS derived.reset_dist;
+DELIMITER ;;
+CREATE PROCEDURE derived.reset_dist()
+  BEGIN
+  ALTER TABLE derived.isa_helper AUTO_INCREMENT = 1;
+END;
+;;
+
+CREATE TABLE derived.isa_helper (
+  `distance` int(11) NOT NULL,
+  `AUI1` varchar(9) NOT NULL,
+  `AUI2` varchar(9) NOT NULL,
+  `SAB` varchar(40) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS derived.insert_dist $$
+CREATE FUNCTION derived.insert_dist(home TEXT, _list TEXT, sab TEXT) RETURNS VARCHAR(8)
+BEGIN
+
+DECLARE _next TEXT DEFAULT NULL;
+DECLARE _nextlen INT DEFAULT NULL;
+DECLARE _value TEXT DEFAULT NULL;
+DECLARE _cnt INT;
+DECLARE i INT DEFAULT 0;
+
+SET _cnt = LENGTH(_list) - LENGTH(REPLACE(_list, '.', ''));
+
+
+iterator:
+LOOP
+  IF LENGTH(TRIM(_list)) = 0 OR _list IS NULL THEN
+    LEAVE iterator;
+  END IF;
+  SET _next = SUBSTRING_INDEX(_list,'.',1);
+  SET _nextlen = LENGTH(_next);
+  SET _value = TRIM(_next);
+
+  INSERT INTO isa_helper (distance, AUI1, AUI2, SAB) VALUES (_cnt - i + 1, home, _next, sab);
+  SET _list = INSERT(_list,1,_nextlen + 1,'');
+  SET i = i + 1;
+END LOOP;
+RETURN 'done';
+
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS derived.row_traverse;
+DELIMITER ;;
+CREATE PROCEDURE derived.row_traverse()
+  BEGIN
+DECLARE n INT DEFAULT 0;
+DECLARE i INT DEFAULT 0;
+SELECT COUNT(*) FROM umls.MRHIER INTO n;
+SET i=0;
+WHILE i<100 DO
+  SELECT derived.insert_dist(T.AUI, T.PTR, T.SAB) FROM umls.MRHIER T LIMIT i,1;
+  CALL derived.reset_dist();
+  SET i = i + 1;
+END WHILE;
+END;
+;;
+
